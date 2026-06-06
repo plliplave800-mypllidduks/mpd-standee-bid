@@ -72,6 +72,7 @@
 
     <script>
         // ======= 🛠️ Connected to your Asian server 🛠️ =======
+        // 🌟 核心修复：彻底删除了 databaseURL 末尾错误的 ": null" 残留！
         const firebaseConfig = {
             apiKey: "AIzaSyDo6mferNmS0Ruix52Bpl-R55nR4roFXoQ",
             authDomain: "mpd-standee-bid.firebaseapp.com",
@@ -88,12 +89,12 @@
 
         let localUser = null;
 
-        // 🌟 Initial Data - 已经帮你补齐了末尾的 }; 并且针对 3 个商品优化了排版布局
+        // Initial Data - 完美的三立牌配置
         const initialData = {
             "standee_01": { id: "standee_01", name: "Winner Winner Eunho Dinner: Eunho Gamer Standee", img: "eunho.jpg", currentPrice: 50, bidder: "None" },
             "standee_02": { id: "standee_02", name: "Bamline's Gathering: CEO Bamby Standee", img: "bamby.jpeg", currentPrice: 50, bidder: "None" }, 
             "standee_03": { id: "standee_03", name: "Bamline's Gathering: CEO Bamby Half Body Standee", img: "bamby2.jpeg", currentPrice: 50, bidder: "None" } 
-        }; // 👈 之前这里漏掉了闭合符号，导致整段 JavaScript 崩溃
+        };
 
         // 1. Check Local Storage for user profile
         function checkLocalLogin() {
@@ -138,4 +139,110 @@
                     bidActionHtml = `
                         <div class="flex gap-2">
                             <input type="number" id="bid-${item.id}" placeholder="Amount (RM)" class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-orange-500">
-                            <button onclick="handleBid('${
+                            <button onclick="handleBid('${item.id}', ${item.currentPrice})" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-2 rounded-lg text-sm transition-all shadow-md active:scale-95">
+                                Place Bid
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    bidActionHtml = `
+                        <button onclick="toggleLoginModal(true)" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 rounded-lg text-sm transition-all">
+                            🔒 Register Information to Unlock Bidding
+                        </button>
+                    `;
+                }
+
+                let currentLeader = item.bidder;
+                if (!currentLeader || currentLeader === "无" || currentLeader === "None") {
+                    currentLeader = "None";
+                }
+
+                const card = `
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
+                        <img src="${item.img}" alt="${item.name}" class="w-full h-96 object-contain bg-gray-50">
+                        <div class="p-5">
+                            <h2 class="text-xl font-bold text-gray-800">${item.name}</h2>
+                            <div class="flex justify-between items-center my-4 bg-orange-50 p-3 rounded-xl">
+                                <div>
+                                    <p class="text-xs text-orange-400 font-semibold">Highest Bid</p>
+                                    <p class="text-2xl font-black text-orange-600">RM ${item.currentPrice}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 text-right">Current Leader</p>
+                                    <p class="text-sm font-bold text-gray-700 text-right">${currentLeader}</p>
+                                </div>
+                            </div>
+                            ${bidActionHtml}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        // 4. Core Bidding Logic
+        function handleBid(id, currentPrice) {
+            if (!localUser) {
+                alert("Please register your details first!");
+                return;
+            }
+
+            const bidInput = parseInt(document.getElementById(`bid-${id}`).value);
+            const minIncrement = 5;
+
+            if (isNaN(bidInput) || bidInput < (currentPrice + minIncrement)) {
+                alert(`Bid failed! Your bid must be at least RM ${currentPrice + minIncrement} (Current Price + Min Increment RM 5)`);
+                return;
+            }
+
+            const maskedPhone = localUser.phone.substring(0, localUser.phone.length - 4) + "****";
+            const bidderDisplayName = `${localUser.name} (${maskedPhone})`;
+
+            database.ref('standees/' + id).update({
+                currentPrice: bidInput,
+                bidder: bidderDisplayName,
+                realPhone: localUser.phone
+            }).then(() => {
+                alert("Bid placed successfully! 🎉");
+            }).catch((error) => {
+                alert("Error placing bid: " + error.message);
+            });
+        }
+
+        // ======= 💾 Form Handling Functions =======
+        function toggleLoginModal(show) {
+            const modal = document.getElementById('login-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function saveUserInfo() {
+            const name = document.getElementById('user-name').value.trim();
+            const phone = document.getElementById('user-phone').value.trim();
+
+            if (!name || !phone) {
+                alert("Please fill in both name and contact number!");
+                return;
+            }
+
+            const userData = { name: name, phone: phone };
+            localStorage.setItem('bid_user', JSON.stringify(userData));
+            
+            toggleLoginModal(false);
+            database.ref('standees').once('value', (snapshot) => {
+                if(snapshot.val()) renderStandees(snapshot.val());
+            });
+        }
+
+        function logout() {
+            if(confirm("Are you sure you want to change your registered profile?")) {
+                localStorage.removeItem('bid_user');
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
