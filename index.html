@@ -22,7 +22,7 @@
         <div id="timer-banner" class="bg-pink-50 border border-pink-200 rounded-2xl p-5 shadow-sm mb-8 text-center">
             <h3 id="timer-label" class="text-sm font-bold text-pink-400 uppercase tracking-wider mb-1">⏳ Time Remaining</h3>
             <div id="countdown-clock" class="text-3xl font-black text-pink-600 font-mono">
-                00d 00h 00m 00s
+                Calculating...
             </div>
         </div>
 
@@ -78,9 +78,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <script>
-        // ======= ⏰ 截止时间设置（在这里修改！） =======
-        // 格式：'YYYY-MM-DDTHH:MM:SS'。比如下面代表 2026年6月9号 晚上10点正截止
-        const TARGET_TIME = new Date('2026-06-09T22:00:00').getTime();
+        // ======= ⏰ 截止时间统一设置区域 =======
+        // 建议使用最稳妥的 'YYYY/MM/DD HH:MM:SS' 斜杠格式，已帮你设为你想要的时间：7月18日下午 5 点
+        const TARGET_TIME = new Date('2026/07/18 17:00:00').getTime();
 
         // ======= 🛠️ Connected to your Asian server 🛠️ =======
         const firebaseConfig = {
@@ -101,13 +101,20 @@
         let globalDataCache = null;
         let isEnded = false;
 
-        // 倒计时核心引擎
+        // 【安全优先】直接开启数据库监听，保证立牌能够顺利拉取
+        database.ref('standees').on('value', (snapshot) => {
+            globalDataCache = snapshot.val();
+            if (globalDataCache) {
+                renderStandees(globalDataCache);
+            }
+        });
+
+        // 倒计时核心引擎（修复完成版）
         function updateTimer() {
-            const TARGET_TIME = new Date('2026-07-18T17:00:00').getTime();
+            const now = new Date().getTime(); // ✨ 修复：重新补回了漏掉的当前时间获取
             const difference = TARGET_TIME - now;
 
             if (difference <= 0) {
-                // 时间到了！自动切断出价
                 isEnded = true;
                 document.getElementById('countdown-clock').innerHTML = "❌ BIDDING HAS ENDED";
                 document.getElementById('timer-banner').className = "bg-red-50 border border-red-200 rounded-2xl p-5 shadow-sm mb-8 text-center";
@@ -119,27 +126,24 @@
                 document.getElementById('page-subtitle').className = "text-red-500 font-bold mt-1";
                 document.getElementById('page-subtitle').innerText = "Thank you for participating! The bidding session has officially ended.";
                 
-                // 刷新卡片，把按钮全部锁死
                 if(globalDataCache) renderStandees(globalDataCache);
                 clearInterval(timerInterval);
                 return;
             }
 
-            // 计算天、时、分、秒
             const days = Math.floor(difference / (1000 * 60 * 60 * 24));
             const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
-            // 显示在网页上
             document.getElementById('countdown-clock').innerHTML = 
                 `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
         }
 
-        // 每秒钟刷新一次倒计时
+        // 绑定定时器
         const timerInterval = setInterval(updateTimer, 1000);
 
-        // 1. Check Local Storage
+        // Check Local Storage
         function checkLocalLogin() {
             const savedUser = localStorage.getItem('bid_user');
             const statusBar = document.getElementById('user-status-bar');
@@ -158,15 +162,7 @@
             }
         }
 
-        // 2. Real-time Listener
-        database.ref('standees').on('value', (snapshot) => {
-            globalDataCache = snapshot.val();
-            if (globalDataCache) {
-                renderStandees(globalDataCache);
-            }
-        });
-
-        // 3. Render Standee Cards
+        // Render UI Cards
         function renderStandees(data) {
             checkLocalLogin();
             const container = document.getElementById('standee-container');
@@ -174,10 +170,8 @@
 
             Object.keys(data).forEach(key => {
                 const item = data[key];
-                
                 let bidActionHtml = '';
                 
-                // 🌟 如果时间到了，不管登没登录，一律变灰色锁死按钮
                 if (isEnded) {
                     bidActionHtml = `
                         <button disabled class="w-full bg-gray-300 text-gray-500 font-bold py-2 rounded-lg text-sm cursor-not-allowed border border-gray-400">
@@ -229,9 +223,8 @@
             });
         }
 
-        // 4. Core Bidding Logic
+        // Handle Bid
         function handleBid(id, currentPrice) {
-            // 防御机制：即使网页没刷新，时间到了也绝对不准写入数据库
             if (new Date().getTime() > TARGET_TIME) {
                 alert("Bidding has already ended!");
                 return;
@@ -264,7 +257,6 @@
             });
         }
 
-        // ======= 💾 Form Handling =======
         function toggleLoginModal(show) {
             if (isEnded) return;
             const modal = document.getElementById('login-modal');
@@ -299,7 +291,7 @@
             }
         }
 
-        // 启动时立刻执行一次倒计时计算
+        // 运行首次更新
         updateTimer();
     </script>
 </body>
