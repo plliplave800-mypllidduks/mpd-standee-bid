@@ -11,15 +11,22 @@
     <div class="max-w-4xl mx-auto w-full mb-12">
         <header class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-200 pb-4 gap-4">
             <div class="text-center md:text-left">
-                <h1 class="text-3xl font-bold text-gray-800">MYPlliDduks Standee Bidding 🛒</h1>
-                <p class="text-gray-500 mt-1">Real-time updates! Enter your name and phone number to participate.</p>
+                <h1 id="page-title" class="text-3xl font-bold text-gray-800">MYPlliDduks Standee Bidding 🛒</h1>
+                <p id="page-subtitle" class="text-gray-500 mt-1">Real-time updates! Enter your name and phone number to participate.</p>
             </div>
             <div id="user-status-bar" class="bg-white px-4 py-2 rounded-xl shadow-sm text-sm border border-gray-200">
                 Checking status...
             </div>
         </header>
 
-        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm mb-8">
+        <div id="timer-banner" class="bg-pink-50 border border-pink-200 rounded-2xl p-5 shadow-sm mb-8 text-center">
+            <h3 id="timer-label" class="text-sm font-bold text-pink-400 uppercase tracking-wider mb-1">⏳ Time Remaining</h3>
+            <div id="countdown-clock" class="text-3xl font-black text-pink-600 font-mono">
+                00d 00h 00m 00s
+            </div>
+        </div>
+
+        <div id="rules-banner" class="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm mb-8">
             <h3 class="text-lg font-bold text-amber-800 flex items-center gap-2 mb-3">
                 📋 Bidding Rules & Regulations
             </h3>
@@ -58,7 +65,7 @@
                     <label class="block text-xs font-bold text-gray-500 mb-1">Contact Number (WhatsApp)</label>
                     <input type="tel" id="user-phone" placeholder="e.g. 0123456789" class="w-full px-3 py-2 border rounded-lg focus:outline-pink-500">
                 </div>
-                <button onclick="saveUserInfo()" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 rounded-lg transition-all shadow-md">
+                <button onclick="saveUserInfo()" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-2.5 rounded-xl transition-all shadow-md active:scale-95">
                     Confirm & Enter
                 </button>
             </div>
@@ -71,6 +78,10 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <script>
+        // ======= ⏰ 截止时间设置（在这里修改！） =======
+        // 格式：'YYYY-MM-DDTHH:MM:SS'。比如下面代表 2026年6月9号 晚上10点正截止
+        const TARGET_TIME = new Date('2026-06-09T22:00:00').getTime();
+
         // ======= 🛠️ Connected to your Asian server 🛠️ =======
         const firebaseConfig = {
             apiKey: "AIzaSyDo6mferNmS0Ruix52Bpl-R55nR4roFXoQ",
@@ -87,15 +98,48 @@
         const database = firebase.database();
 
         let localUser = null;
+        let globalDataCache = null;
+        let isEnded = false;
 
-        // Initial Data - 完美的三立牌配置
-        const initialData = {
-            "standee_01": { id: "standee_01", name: "Winner Winner Eunho Dinner: Eunho Gamer Standee", img: "eunho.jpg", currentPrice: 50, bidder: "None" },
-            "standee_02": { id: "standee_02", name: "Bamline's Gathering: CEO Bamby Standee", img: "bamby.jpeg", currentPrice: 50, bidder: "None" }, 
-            "standee_03": { id: "standee_03", name: "Bamline's Gathering: CEO Bamby Half Body Standee", img: "bamby2.jpeg", currentPrice: 50, bidder: "None" } 
-        };
+        // 倒计时核心引擎
+        function updateTimer() {
+            const TARGET_TIME = new Date('2026-07-18T17:00:00').getTime();
+            const difference = TARGET_TIME - now;
 
-        // 1. Check Local Storage for user profile
+            if (difference <= 0) {
+                // 时间到了！自动切断出价
+                isEnded = true;
+                document.getElementById('countdown-clock').innerHTML = "❌ BIDDING HAS ENDED";
+                document.getElementById('timer-banner').className = "bg-red-50 border border-red-200 rounded-2xl p-5 shadow-sm mb-8 text-center";
+                document.getElementById('countdown-clock').className = "text-3xl font-black text-red-600 font-mono";
+                document.getElementById('timer-label').className = "text-sm font-bold text-red-400 uppercase tracking-wider mb-1";
+                document.getElementById('timer-label').innerText = "📢 Status Announcement";
+                
+                document.getElementById('page-title').innerHTML = "MYPlliDduks Standee Bidding [CLOSED] ❌";
+                document.getElementById('page-subtitle').className = "text-red-500 font-bold mt-1";
+                document.getElementById('page-subtitle').innerText = "Thank you for participating! The bidding session has officially ended.";
+                
+                // 刷新卡片，把按钮全部锁死
+                if(globalDataCache) renderStandees(globalDataCache);
+                clearInterval(timerInterval);
+                return;
+            }
+
+            // 计算天、时、分、秒
+            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+            // 显示在网页上
+            document.getElementById('countdown-clock').innerHTML = 
+                `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
+        }
+
+        // 每秒钟刷新一次倒计时
+        const timerInterval = setInterval(updateTimer, 1000);
+
+        // 1. Check Local Storage
         function checkLocalLogin() {
             const savedUser = localStorage.getItem('bid_user');
             const statusBar = document.getElementById('user-status-bar');
@@ -103,28 +147,26 @@
             if (savedUser) {
                 localUser = JSON.parse(savedUser);
                 statusBar.innerHTML = `
-                    <span class="text-gray-600 font-medium"> 👤 ${localUser.name} (${localUser.phone})</span>
-                    <button onclick="logout()" class="ml-3 text-red-500 hover:text-red-700 font-bold">Change</button>
+                    <span class="text-gray-600 font-medium"> 👤 ${localUser.name}</span>
+                    ${!isEnded ? `<button onclick="logout()" class="ml-3 text-red-500 hover:text-red-700 font-bold">Change</button>` : ''}
                 `;
             } else {
                 localUser = null;
-                statusBar.innerHTML = `
-                    <button onclick="toggleLoginModal(true)" class="bg-pink-500 hover:bg-pink-600 text-white font-bold px-3 py-1 rounded-lg transition-all shadow-sm">Register to Bid</button>
-                `;
+                statusBar.innerHTML = isEnded 
+                    ? `<span class="text-gray-400">Viewing Final Results</span>`
+                    : `<button onclick="toggleLoginModal(true)" class="bg-pink-500 hover:bg-pink-600 text-white font-bold px-3 py-1 rounded-lg transition-all shadow-sm">Register to Bid</button>`;
             }
         }
 
-        // 2. Real-time Listener for Database Updates
+        // 2. Real-time Listener
         database.ref('standees').on('value', (snapshot) => {
-            let data = snapshot.val();
-            if (!data) {
-                database.ref('standees').set(initialData);
-                data = initialData;
+            globalDataCache = snapshot.val();
+            if (globalDataCache) {
+                renderStandees(globalDataCache);
             }
-            renderStandees(data);
         });
 
-        // 3. Render Standee Cards onto UI
+        // 3. Render Standee Cards
         function renderStandees(data) {
             checkLocalLogin();
             const container = document.getElementById('standee-container');
@@ -134,7 +176,15 @@
                 const item = data[key];
                 
                 let bidActionHtml = '';
-                if (localUser) {
+                
+                // 🌟 如果时间到了，不管登没登录，一律变灰色锁死按钮
+                if (isEnded) {
+                    bidActionHtml = `
+                        <button disabled class="w-full bg-gray-300 text-gray-500 font-bold py-2 rounded-lg text-sm cursor-not-allowed border border-gray-400">
+                            🔒 Bidding Has Ended
+                        </button>
+                    `;
+                } else if (localUser) {
                     bidActionHtml = `
                         <div class="flex gap-2">
                             <input type="number" id="bid-${item.id}" placeholder="Amount (RM)" class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-pink-500">
@@ -153,22 +203,21 @@
 
                 let currentLeader = item.bidder;
                 if (!currentLeader || currentLeader === "None") {
-                    currentLeader = "None";
+                    currentLeader = isEnded ? "No Winner" : "None";
                 }
 
-                // 🌟 顺便帮你把卡片里的橙色高亮小框（bg-orange-50之类）也升级成了温柔的芭比粉色调（bg-pink-50）
                 const card = `
-                    <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
-                        <img src="${item.img}" alt="${item.name}" class="w-full h-96 object-contain bg-gray-50">
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200 ${isEnded ? 'opacity-90' : ''}">
+                        <img src="${item.img}" alt="${item.name}" class="w-full h-96 object-contain bg-gray-50 ${isEnded ? 'filter grayscale-[15%]' : ''}">
                         <div class="p-5">
-                            <h2 class="text-xl font-bold text-gray-800">${item.name}</h2>
-                            <div class="flex justify-between items-center my-4 bg-pink-50 p-3 rounded-xl">
+                            <h2 class="text-xl font-bold ${isEnded ? 'text-gray-500' : 'text-gray-800'}">${item.name}</h2>
+                            <div class="flex justify-between items-center my-4 ${isEnded ? 'bg-gray-100 border border-gray-200' : 'bg-pink-50'} p-3 rounded-xl">
                                 <div>
-                                    <p class="text-xs text-pink-400 font-semibold">Highest Bid</p>
-                                    <p class="text-2xl font-black text-pink-600">RM ${item.currentPrice}</p>
+                                    <p class="text-xs ${isEnded ? 'text-gray-400' : 'text-pink-400'} font-semibold">${isEnded ? 'Final Price' : 'Highest Bid'}</p>
+                                    <p class="text-2xl font-black ${isEnded ? 'text-green-600' : 'text-pink-600'}">RM ${item.currentPrice}</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-gray-400 text-right">Current Leader</p>
+                                    <p class="text-xs text-gray-400 text-right">${isEnded ? '🏆 Winner' : 'Current Leader'}</p>
                                     <p class="text-sm font-bold text-gray-700 text-right">${currentLeader}</p>
                                 </div>
                             </div>
@@ -182,6 +231,12 @@
 
         // 4. Core Bidding Logic
         function handleBid(id, currentPrice) {
+            // 防御机制：即使网页没刷新，时间到了也绝对不准写入数据库
+            if (new Date().getTime() > TARGET_TIME) {
+                alert("Bidding has already ended!");
+                return;
+            }
+
             if (!localUser) {
                 alert("Please register your details first!");
                 return;
@@ -209,8 +264,9 @@
             });
         }
 
-        // ======= 💾 Form Handling Functions =======
+        // ======= 💾 Form Handling =======
         function toggleLoginModal(show) {
+            if (isEnded) return;
             const modal = document.getElementById('login-modal');
             if (show) {
                 modal.classList.remove('hidden');
@@ -232,18 +288,19 @@
             localStorage.setItem('bid_user', JSON.stringify(userData));
             
             toggleLoginModal(false);
-            database.ref('standees').once('value', (snapshot) => {
-                if(snapshot.val()) renderStandees(snapshot.val());
-            });
+            if(globalDataCache) renderStandees(globalDataCache);
         }
 
-        // 🌟 修复核心：这里的逻辑保留，退出时确认提示
         function logout() {
+            if(isEnded) return;
             if(confirm("Are you sure you want to change your registered profile?")) {
                 localStorage.removeItem('bid_user');
                 location.reload();
             }
         }
+
+        // 启动时立刻执行一次倒计时计算
+        updateTimer();
     </script>
 </body>
 </html>
