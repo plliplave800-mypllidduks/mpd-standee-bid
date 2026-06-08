@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MYPlliDduks Standee Live Bidding</title>
-    <!-- Tailwind CSS for Styling -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 md:p-8 flex flex-col justify-between">
@@ -15,13 +14,11 @@
                 <h1 class="text-3xl font-bold text-gray-800">MYPlliDduks Standee Bidding 🛒</h1>
                 <p class="text-gray-500 mt-1">Real-time updates! Enter your name and phone number to participate.</p>
             </div>
-            <!-- User Status Bar -->
             <div id="user-status-bar" class="bg-white px-4 py-2 rounded-xl shadow-sm text-sm border border-gray-200">
                 Checking status...
             </div>
         </header>
 
-        <!-- 📜 Rules Section -->
         <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm mb-8">
             <h3 class="text-lg font-bold text-amber-800 flex items-center gap-2 mb-3">
                 📋 Bidding Rules & Regulations
@@ -42,13 +39,11 @@
             </ul>
         </div>
 
-        <!-- Standee Cards Container -->
         <div id="standee-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             <div class="text-center col-span-full py-10 text-gray-400">Loading standees from database...</div>
         </div>
     </div>
 
-    <!-- Register Modal Box -->
     <div id="login-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
             <h3 class="text-xl font-bold text-gray-800 mb-2 text-center">Register Information</h3>
@@ -63,7 +58,7 @@
                     <label class="block text-xs font-bold text-gray-500 mb-1">Contact Number (WhatsApp)</label>
                     <input type="tel" id="user-phone" placeholder="e.g. 0123456789" class="w-full px-3 py-2 border rounded-lg focus:outline-pink-500">
                 </div>
-                <button onclick="saveUserInfo()" class="w-full bg-grey-500 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-all shadow-md">
+                <button onclick="saveUserInfo()" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-2 rounded-lg transition-all shadow-md">
                     Confirm & Enter
                 </button>
             </div>
@@ -72,7 +67,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
@@ -162,6 +156,7 @@
                     currentLeader = "None";
                 }
 
+                // 🌟 顺便帮你把卡片里的橙色高亮小框（bg-orange-50之类）也升级成了温柔的芭比粉色调（bg-pink-50）
                 const card = `
                     <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200">
                         <img src="${item.img}" alt="${item.name}" class="w-full h-96 object-contain bg-gray-50">
@@ -242,6 +237,7 @@
             });
         }
 
+        // 🌟 修复核心：这里的逻辑保留，退出时确认提示
         function logout() {
             if(confirm("Are you sure you want to change your registered profile?")) {
                 localStorage.removeItem('bid_user');
