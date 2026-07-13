@@ -242,20 +242,20 @@
             const bidInput = parseInt(document.getElementById(`bid-${id}`).value);
             const minIncrement = 5;
 
-            // ✅ 替换后的代码：允许第一个人出 50 元，后续的人必须加价 5 元
-if (currentPrice === 50) {
-    // 如果现在还是无人出价的初始状态 (50元)，那么出价可以是 50，也可以是 55 及以上
-    if (bidAmount !== 50 && bidAmount < 55) {
-        alert("Bid failed! For the opening bid, you can either bid RM 50 to start, or enter RM 55 or higher.");
-        return;
-    }
-} else {
-    // 如果已经有人出过价了，维持原本的 +5 加价规则
-    if (bidAmount < currentPrice + 5) {
-        alert(`Bid failed! Your bid must be at least RM ${currentPrice + 5} (Current Price + Min Increment RM 5)`);
-        return;
-    }
-}
+            // ======= 🚀 完美兼容 50 元起始价与加价 5 元的逻辑 🚀 =======
+        if (currentPrice === 50 && bidder === "None") {
+            // 如果目前还是初始状态（没人出过价）
+            if (bidAmount !== 50 && bidAmount < 55) {
+                alert("Bid failed! For the opening bid, you can either bid RM 50 to start, or enter RM 55 or higher.");
+                return;
+            }
+        } else {
+            // 如果已经有人出过价了
+            if (bidAmount < currentPrice + 5) {
+                alert(`Bid failed! Your bid must be at least RM ${currentPrice + 5} (Current Price + Min Increment RM 5)`);
+                return;
+            }
+        }
 
             const maskedPhone = localUser.phone.substring(0, localUser.phone.length - 4) + "****";
             const bidderDisplayName = `${localUser.name} (${maskedPhone})`;
