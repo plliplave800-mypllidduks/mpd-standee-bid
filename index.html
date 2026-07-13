@@ -78,14 +78,14 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <script>
         // ======= ⏰ 截止时间统一设置区域 =======
         const TARGET_TIME = new Date('2026/07/18 17:30:00').getTime();
 
-        // ======= 🛠️ 已成功连接到你个人的新 Singapore 服务器 🛠️ =======
+        // ======= 🛠️ Firebase 配置 =======
         const firebaseConfig = {
             apiKey: "AIzaSyBwr8EXfJ9fLVjyQJVRT5SFI1LIA3IKvV4",
             authDomain: "myp-standee-bid-wx.firebaseapp.com",
@@ -109,6 +109,8 @@
             globalDataCache = snapshot.val();
             if (globalDataCache) {
                 renderStandees(globalDataCache);
+            } else {
+                document.getElementById('standee-container').innerHTML = '<div class="text-center col-span-full py-10 text-gray-400">No standees available.</div>';
             }
         });
 
@@ -180,13 +182,6 @@
                             🔒 Bidding Has Ended
                         </button>
                     `;
-                } else if (item.status === "locked") {
-                    // ======= ⏳ 待定立牌锁定呈现效果 =======
-                    bidActionHtml = `
-                        <button disabled class="w-full bg-amber-100 text-amber-700 font-bold py-2 rounded-lg text-sm cursor-not-allowed border border-amber-300">
-                            ⏳ Coming Soon (Pending Status)
-                        </button>
-                    `;
                 } else if (localUser) {
                     bidActionHtml = `
                         <div class="flex gap-2">
@@ -210,14 +205,14 @@
                 }
 
                 const card = `
-                    <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200 ${isEnded ? 'opacity-90' : ''} ${item.status === 'locked' ? 'opacity-75' : ''}">
+                    <div class="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-200 ${isEnded ? 'opacity-90' : ''}">
                         <img src="${item.img}" alt="${item.name}" class="w-full h-96 object-contain bg-gray-50 ${isEnded ? 'filter grayscale-[15%]' : ''}">
                         <div class="p-5">
                             <h2 class="text-xl font-bold ${isEnded ? 'text-gray-500' : 'text-gray-800'}">${item.name}</h2>
-                            <div class="flex justify-between items-center my-4 ${isEnded ? 'bg-gray-100 border border-gray-200' : item.status === 'locked' ? 'bg-amber-50/60 border border-amber-100' : 'bg-pink-50'} p-3 rounded-xl">
+                            <div class="flex justify-between items-center my-4 ${isEnded ? 'bg-gray-100 border border-gray-200' : 'bg-pink-50'} p-3 rounded-xl">
                                 <div>
-                                    <p class="text-xs ${isEnded ? 'text-gray-400' : item.status === 'locked' ? 'text-amber-500' : 'text-pink-400'} font-semibold">${isEnded ? 'Final Price' : item.status === 'locked' ? 'Starting Price' : 'Highest Bid'}</p>
-                                    <p class="text-2xl font-black ${isEnded ? 'text-green-600' : item.status === 'locked' ? 'text-amber-600' : 'text-pink-600'}">RM ${item.currentPrice}</p>
+                                    <p class="text-xs ${isEnded ? 'text-gray-400' : 'text-pink-400'} font-semibold">${isEnded ? 'Final Price' : 'Highest Bid'}</p>
+                                    <p class="text-2xl font-black ${isEnded ? 'text-green-600' : 'text-pink-600'}">RM ${item.currentPrice}</p>
                                 </div>
                                 <div>
                                     <p class="text-xs text-gray-400 text-right">${isEnded ? '🏆 Winner' : 'Current Leader'}</p>
@@ -239,14 +234,6 @@
                 return;
             }
 
-            const itemData = globalDataCache ? globalDataCache[id] : null;
-            
-            // 锁定安全防线
-            if (itemData && itemData.status === "locked") {
-                alert("This standee is currently locked and not open for bidding yet!");
-                return;
-            }
-
             if (!localUser) {
                 alert("Please register your details first!");
                 return;
@@ -259,9 +246,10 @@
                 return;
             }
 
+            const itemData = globalDataCache ? globalDataCache[id] : null;
             const isInitialState = !itemData || !itemData.bidder || itemData.bidder === "None";
 
-            // ======= 🚀 动态起始价出价策略校验 =======
+            // ======= 🚀 完美兼容所有不同起拍价（50元/15元）的校验逻辑 🚀 =======
             if (isInitialState) {
                 if (bidInput !== currentPrice && bidInput < currentPrice + 5) {
                     alert(`Bid failed! For the opening bid, you can either bid RM ${currentPrice} to start, or enter RM ${currentPrice + 5} or higher.`);
