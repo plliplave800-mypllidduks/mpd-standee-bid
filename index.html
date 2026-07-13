@@ -78,15 +78,14 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <script>
         // ======= ⏰ 截止时间统一设置区域 =======
-        // 建议使用最稳妥的 'YYYY/MM/DD HH:MM:SS' 斜杠格式
         const TARGET_TIME = new Date('2026/07/18 17:30:00').getTime();
 
-       // ======= 🛠️ 已成功连接到你个人的新 Singapore 服务器 🛠️ =======
+        // ======= 🛠️ 已成功连接到你个人的新 Singapore 服务器 🛠️ =======
         const firebaseConfig = {
             apiKey: "AIzaSyBwr8EXfJ9fLVjyQJVRT5SFI1LIA3IKvV4",
             authDomain: "myp-standee-bid-wx.firebaseapp.com",
@@ -105,7 +104,7 @@
         let globalDataCache = null;
         let isEnded = false;
 
-        // 【安全优先】直接开启数据库监听，保证立牌能够顺利拉取
+        // 开启数据库监听
         database.ref('standees').on('value', (snapshot) => {
             globalDataCache = snapshot.val();
             if (globalDataCache) {
@@ -113,9 +112,9 @@
             }
         });
 
-        // 倒计时核心引擎（修复完成版）
+        // 倒计时核心引擎
         function updateTimer() {
-            const now = new Date().getTime(); // ✨ 修复：重新补回了漏掉的当前时间获取
+            const now = new Date().getTime();
             const difference = TARGET_TIME - now;
 
             if (difference <= 0) {
@@ -144,7 +143,6 @@
                 `${days}d ${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
         }
 
-        // 绑定定时器
         const timerInterval = setInterval(updateTimer, 1000);
 
         // Check Local Storage
@@ -227,7 +225,7 @@
             });
         }
 
-       // Handle Bid
+        // Handle Bid
         function handleBid(id, currentPrice) {
             if (new Date().getTime() > TARGET_TIME) {
                 alert("Bidding has already ended!");
@@ -239,28 +237,23 @@
                 return;
             }
 
-            // 获取输入框的值
             const bidInput = parseInt(document.getElementById(`bid-${id}`).value);
             
-            // 防呆验证：没输数字或者输了负数
             if (isNaN(bidInput) || bidInput <= 0) {
                 alert("Please enter a valid bidding amount!");
                 return;
             }
 
-            // 拿到当前这块立牌在数据库里的真实数据，用来确认有没有人出过价
             const itemData = globalDataCache ? globalDataCache[id] : null;
             const isInitialState = !itemData || !itemData.bidder || itemData.bidder === "None";
 
-            // ======= 🚀 终极完美修复版：价格与加价逻辑 🚀 =======
+            // ======= 🚀 修复完闭包与变量绑定的全新校验逻辑 🚀 =======
             if (currentPrice === 50 && isInitialState) {
-                // 如果目前是初始状态（50元没人出过价）
                 if (bidInput !== 50 && bidInput < 55) {
                     alert("Bid failed! For the opening bid, you can either bid RM 50 to start, or enter RM 55 or higher.");
                     return;
                 }
             } else {
-                // 如果已经有人出过价了，必须遵守 +5 规则
                 if (bidInput < currentPrice + 5) {
                     alert(`Bid failed! Your bid must be at least RM ${currentPrice + 5} (Current Price + Min Increment RM 5)`);
                     return;
@@ -270,34 +263,19 @@
             const maskedPhone = localUser.phone.substring(0, localUser.phone.length - 4) + "****";
             const bidderDisplayName = `${localUser.name} (${maskedPhone})`;
 
-            // 提交到 Firebase
             database.ref('standees/' + id).update({
                 currentPrice: bidInput,
                 bidder: bidderDisplayName,
                 realPhone: localUser.phone
             }).then(() => {
                 alert("Bid placed successfully! 🎉");
-                // 成功后把输入框清空
                 document.getElementById(`bid-${id}`).value = '';
             }).catch((error) => {
                 alert("Error placing bid: " + error.message);
             });
         }
 
-            const maskedPhone = localUser.phone.substring(0, localUser.phone.length - 4) + "****";
-            const bidderDisplayName = `${localUser.name} (${maskedPhone})`;
-
-            database.ref('standees/' + id).update({
-                currentPrice: bidInput,
-                bidder: bidderDisplayName,
-                realPhone: localUser.phone
-            }).then(() => {
-                alert("Bid placed successfully! 🎉");
-            }).catch((error) => {
-                alert("Error placing bid: " + error.message);
-            });
-        }
-
+        // UI Modals & Helpers
         function toggleLoginModal(show) {
             if (isEnded) return;
             const modal = document.getElementById('login-modal');
@@ -332,7 +310,6 @@
             }
         }
 
-        // 运行首次更新
         updateTimer();
     </script>
 </body>
