@@ -227,7 +227,7 @@
             });
         }
 
-        // Handle Bid
+       // Handle Bid
         function handleBid(id, currentPrice) {
             if (new Date().getTime() > TARGET_TIME) {
                 alert("Bidding has already ended!");
@@ -239,22 +239,49 @@
                 return;
             }
 
+            // 获取输入框的值
             const bidInput = parseInt(document.getElementById(`bid-${id}`).value);
-            const minIncrement = 5;
+            
+            // 防呆验证：没输数字或者输了负数
+            if (isNaN(bidInput) || bidInput <= 0) {
+                alert("Please enter a valid bidding amount!");
+                return;
+            }
 
-            // ======= 🚀 完美兼容 50 元起始价与加价 5 元的逻辑 🚀 =======
-        if (currentPrice === 50 && bidder === "None") {
-            // 如果目前还是初始状态（没人出过价）
-            if (bidAmount !== 50 && bidAmount < 55) {
-                alert("Bid failed! For the opening bid, you can either bid RM 50 to start, or enter RM 55 or higher.");
-                return;
+            // 拿到当前这块立牌在数据库里的真实数据，用来确认有没有人出过价
+            const itemData = globalDataCache ? globalDataCache[id] : null;
+            const isInitialState = !itemData || !itemData.bidder || itemData.bidder === "None";
+
+            // ======= 🚀 终极完美修复版：价格与加价逻辑 🚀 =======
+            if (currentPrice === 50 && isInitialState) {
+                // 如果目前是初始状态（50元没人出过价）
+                if (bidInput !== 50 && bidInput < 55) {
+                    alert("Bid failed! For the opening bid, you can either bid RM 50 to start, or enter RM 55 or higher.");
+                    return;
+                }
+            } else {
+                // 如果已经有人出过价了，必须遵守 +5 规则
+                if (bidInput < currentPrice + 5) {
+                    alert(`Bid failed! Your bid must be at least RM ${currentPrice + 5} (Current Price + Min Increment RM 5)`);
+                    return;
+                }
             }
-        } else {
-            // 如果已经有人出过价了
-            if (bidAmount < currentPrice + 5) {
-                alert(`Bid failed! Your bid must be at least RM ${currentPrice + 5} (Current Price + Min Increment RM 5)`);
-                return;
-            }
+
+            const maskedPhone = localUser.phone.substring(0, localUser.phone.length - 4) + "****";
+            const bidderDisplayName = `${localUser.name} (${maskedPhone})`;
+
+            // 提交到 Firebase
+            database.ref('standees/' + id).update({
+                currentPrice: bidInput,
+                bidder: bidderDisplayName,
+                realPhone: localUser.phone
+            }).then(() => {
+                alert("Bid placed successfully! 🎉");
+                // 成功后把输入框清空
+                document.getElementById(`bid-${id}`).value = '';
+            }).catch((error) => {
+                alert("Error placing bid: " + error.message);
+            });
         }
 
             const maskedPhone = localUser.phone.substring(0, localUser.phone.length - 4) + "****";
