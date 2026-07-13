@@ -77,8 +77,7 @@
             <button onclick="toggleLoginModal(false)" class="w-full text-center text-pink-400 text-sm mt-4 hover:text-pink-600">Cancel</button>
         </div>
     </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <script>
@@ -247,7 +246,6 @@
             const itemData = globalDataCache ? globalDataCache[id] : null;
             const isInitialState = !itemData || !itemData.bidder || itemData.bidder === "None";
 
-            // ======= 🚀 修复完闭包与变量绑定的全新校验逻辑 🚀 =======
             if (currentPrice === 50 && isInitialState) {
                 if (bidInput !== 50 && bidInput < 55) {
                     alert("Bid failed! For the opening bid, you can either bid RM 50 to start, or enter RM 55 or higher.");
